@@ -34,7 +34,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -496,6 +497,12 @@ h3 {
   font-weight: 700;
 }
 
+.task-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
 .task-check {
   width: 42px;
   height: 42px;
@@ -509,6 +516,61 @@ h3 {
 .task-check[aria-pressed="true"] {
   background: var(--green);
   color: #fff;
+}
+
+.small-action {
+  min-width: 42px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.small-action:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.small-action:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.delete-custom,
+.photo-delete {
+  background: #ffd7d2;
+}
+
+.task-reflection {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(25, 24, 22, 0.35);
+}
+
+.task-reflection span {
+  color: var(--green);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.reflection-input {
+  width: 100%;
+  min-height: 68px;
+  padding: 10px 12px;
+  border: var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, 0.88);
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.5;
+  resize: vertical;
 }
 
 .choice-panel {
@@ -597,6 +659,99 @@ h3 {
   color: var(--muted);
   font-size: 0.85rem;
   line-height: 1.5;
+  font-weight: 700;
+}
+
+.photo-checkin {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: var(--line);
+}
+
+.photo-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.photo-upload-button {
+  position: relative;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: var(--line);
+  border-radius: 8px;
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.photo-upload-button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.photo-upload-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.photo-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 10px;
+}
+
+.photo-card {
+  position: relative;
+  aspect-ratio: 1;
+  margin: 0;
+  border: var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.photo-card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.photo-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 34px;
+  min-height: 30px;
+  border: var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.photo-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
   font-weight: 700;
 }
 
@@ -738,8 +893,17 @@ h3 {
     display: none;
   }
 
+  .task-actions {
+    align-self: start;
+  }
+
   .choice-grid,
-  .custom-task-form {
+  .custom-task-form,
+  .photo-header {
     grid-template-columns: 1fr;
+  }
+
+  .photo-upload-button {
+    width: 100%;
   }
 }
