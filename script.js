@@ -2,6 +2,8 @@ const YEAR = 2026;
 const MONTH_INDEX = 6;
 const TOTAL_DAYS = 31;
 const STORAGE_KEY = "july-growth-plan-2026";
+const SELECTION_STORAGE_KEY = "july-growth-plan-2026-selections";
+const MAX_DAILY_TASKS = 2;
 
 const plans = [
   {
@@ -262,8 +264,100 @@ const bonusTips = [
   "任务结束后给自己画一个小勾。",
   "开窗通风 5 分钟，让身体先醒过来。",
   "把明天要用的书和工具提前摆好。",
-  "完成后不要立刻加量，先记录感受。"
+  "完成后不要立刻加量，先记录感受。",
+  "先做最容易开始的那一项，做满 10 分钟也算启动。",
+  "把今天的任务写在纸上，完成后划掉。",
+  "阅读前先深呼吸 5 次，让注意力落下来。",
+  "运动前活动手腕、脚踝、肩颈各 30 秒。",
+  "拼图或拼豆前先把颜色分好，减少中途分心。",
+  "给今天留一个 20 分钟不被打扰的小窗口。",
+  "完成一项后离开座位走 2 分钟。",
+  "如果状态差，把任务缩小一半，但不要清零。",
+  "晚上复盘只写一句：今天最顺的一步是什么。",
+  "把常用工具放进一个小盒子，开始时直接拿出来。",
+  "做手作时只开一盏柔和的灯，减少视觉干扰。",
+  "运动结束后补水，不马上躺下刷手机。",
+  "给自己设一个停止点，到点就收尾。",
+  "把任务放在饭后或洗漱后的固定位置，更容易坚持。",
+  "今天只和昨天的自己比，不补旧账。",
+  "遇到拖延时，先计时 5 分钟试做。",
+  "给眼睛休息 1 分钟，看远处或闭眼放松。",
+  "把完成记录截图或拍照，留一个小证据。",
+  "睡前 30 分钟不要再开启新的复杂任务。",
+  "如果今天很忙，只保留一个阅读或运动的最小版本。",
+  "任务前放一首固定的开始音乐，形成仪式感。",
+  "完成后整理桌面 2 分钟，给明天减少阻力。"
 ];
+
+const readingChoices = [
+  ["阅读起步", "读 15 分钟，圈出 1 句有用的话，写下今天能用在哪里。"],
+  ["安静读一节", "读 20 分钟，结束时给这一节写一个 10 字以内小标题。"],
+  ["摘抄卡片", "读 20 分钟，做 1 张卡片：原句、自己的解释、一个行动。"],
+  ["费曼复述", "读 18 分钟后，用 3 句话讲给自己听，说不清的地方做标记。"],
+  ["复盘旧笔记", "不读新内容，回看 15 分钟旧笔记，挑出 1 条继续执行。"]
+];
+
+const brainChoices = [
+  ["小拼图", "拼图 20 分钟，先找边框或最明显的颜色区域。"],
+  ["数独一盘", "做 1 盘入门数独，卡住时只写候选数，不急着看答案。"],
+  ["逻辑题", "做 1 道逻辑推理题，写出推理步骤，比答案更重要。"],
+  ["记忆挑战", "记 8 个随机词，20 分钟后默写，看看能记住几个。"],
+  ["棋类小题", "做 2 道象棋或国际象棋入门残局，每题思考 5 分钟。"]
+];
+
+const craftChoices = [
+  ["拼豆小图", "做一个 10x10 或 12x12 小图案，先配色再动手。"],
+  ["折纸一件", "折 1 个简单模型，卡住时倒回两步检查折痕。"],
+  ["拼豆配色", "只做配色表和前 1/3 图案，不追求一次完成。"],
+  ["手作收纳", "整理拼豆、拼图或折纸材料 15 分钟，按颜色或用途分组。"],
+  ["成果拍照", "把最近的手作或拼图进度拍照，写一句最满意的细节。"]
+];
+
+const resetChoices = [
+  ["桌面清理", "整理桌面 10 分钟，只留下今天会用到的物品。"],
+  ["呼吸放松", "做 4-6 呼吸 5 轮：吸气 4 拍，呼气 6 拍。"],
+  ["睡前收尾", "睡前写 3 行：完成了什么、哪里卡住、明天先做什么。"],
+  ["散步观察", "轻松散步 15 分钟，观察路上 5 个细节，不听复杂内容。"],
+  ["轻复盘", "回看今天两个任务，给难度打 1 到 5 分，明天据此调整。"]
+];
+
+const wellnessChoices = [
+  ["肩颈舒展", "颈侧拉伸、肩胛绕环、扩胸运动各 1 分钟，动作放慢。"],
+  ["八段锦入门", "只练八段锦前 2 式，每式 4 遍，重点把呼吸放顺。"],
+  ["靠墙站立", "靠墙站 3 分钟，后脑、肩背、臀部尽量贴墙；结束走 5 分钟。"],
+  ["仰卧起坐起步", "仰卧起坐 6 次，分 2 组；结束做猫牛式 1 分钟。"],
+  ["晚间舒展", "小腿、髋部、胸肩各拉伸 45 秒，感觉舒服即可。"],
+  ["八段锦四式", "练八段锦前 4 式，每式 4 遍；结束喝水休息。"],
+  ["轻核心", "仰卧起坐 8 次，臀桥 10 次，休息后再做 1 轮。"],
+  ["养生快走", "快走 15 分钟，保持能正常说话；回家拉伸小腿。"],
+  ["提踵平衡", "提踵 12 次 x 2 组，单脚站左右各 20 秒，扶墙也可以。"],
+  ["八段锦半套", "练八段锦前 4 式加收势，动作慢一点，不追求出汗。"],
+  ["仰卧起坐进阶", "仰卧起坐 10 次，分 2 组；结束腹部放松 1 分钟。"],
+  ["靠墙半蹲", "靠墙半蹲 15 秒 x 3 组，膝盖不舒服就缩短时间。"],
+  ["肩背修复", "靠墙天使 8 次，肩胛后缩 12 次，胸部拉伸 1 分钟。"],
+  ["八段锦六式", "练八段锦前 6 式，每式 4 遍，保持鼻吸口呼。"],
+  ["月中小测", "仰卧起坐 12 次以内，记录实际次数；再散步 10 分钟。"],
+  ["八段锦全套轻版", "八段锦全套 1 遍，每式 2 到 4 遍，动作完整比强度重要。"],
+  ["仰卧起坐巩固", "仰卧起坐 12 次，分 2 组；结束做仰卧抱膝 1 分钟。"],
+  ["静态拉伸", "髋部、腿后侧、胸肩各 60 秒，配合慢呼吸。"],
+  ["温和循环", "深蹲 8 次、臀桥 12 次、仰卧起坐 8 次，循环 2 轮。"],
+  ["快走养心肺", "快走 20 分钟，前 3 分钟慢走热身，最后 3 分钟放慢。"],
+  ["八段锦全套", "八段锦全套 1 遍；如果精神好，再加仰卧起坐 10 次。"],
+  ["核心稳定", "仰卧起坐 14 次，分 2 组；侧桥左右各 15 秒。"],
+  ["下肢养护", "靠墙半蹲 20 秒 x 3 组，提踵 15 次 x 2 组。"],
+  ["舒缓太极", "练 5 分钟太极云手或慢速摆臂，再散步 15 分钟。"],
+  ["八段锦加量", "八段锦全套 1 遍，每式尽量做到 6 遍；不过度憋气。"],
+  ["仰卧起坐加量", "仰卧起坐 16 次，分 2 到 3 组；结束拉伸腹部。"],
+  ["全身舒展", "八段锦全套轻版 1 遍，再做颈肩和小腿拉伸。"],
+  ["晚间快走", "快走 25 分钟，保持轻微出汗；睡前不再做剧烈运动。"],
+  ["温和力量", "深蹲 10 次、臀桥 15 次、仰卧起坐 12 次，循环 2 轮。"],
+  ["月底复测", "仰卧起坐最多 18 次以内，记录次数；再做八段锦 4 式放松。"],
+  ["收尾养生", "八段锦全套 1 遍，仰卧起坐 18 到 20 次按状态分组完成。"]
+];
+
+plans.forEach((plan) => {
+  plan.choices = buildDailyChoices(plan);
+});
 
 const weekdayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
 const calendarGrid = document.querySelector("#calendarGrid");
@@ -280,6 +374,28 @@ const shuffleBonusButton = document.querySelector("#shuffleBonus");
 
 let selectedDay = getDefaultDay();
 let completed = loadCompleted();
+let selections = loadSelections();
+
+function buildDailyChoices(plan) {
+  const day = plan.day;
+  return [
+    makeTask(`read-${day}`, "阅读", "读", readingChoices[(day - 1) % readingChoices.length]),
+    makeTask(`move-${day}`, "运动", "养", wellnessChoices[day - 1]),
+    makeTask(`brain-${day}`, "益智", "智", brainChoices[(day + 1) % brainChoices.length]),
+    makeTask(`craft-${day}`, "益智", "作", craftChoices[(day + 2) % craftChoices.length]),
+    makeTask(`reset-${day}`, "整理", "收", resetChoices[(day + 3) % resetChoices.length])
+  ];
+}
+
+function makeTask(id, kind, icon, source) {
+  return {
+    id,
+    kind,
+    icon,
+    title: source[0],
+    detail: source[1]
+  };
+}
 
 function getDefaultDay() {
   const now = new Date();
@@ -297,8 +413,20 @@ function loadCompleted() {
   }
 }
 
+function loadSelections() {
+  try {
+    return JSON.parse(localStorage.getItem(SELECTION_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
 function saveCompleted() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
+}
+
+function saveSelections() {
+  localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(selections));
 }
 
 function renderCalendar() {
@@ -317,7 +445,8 @@ function renderCalendar() {
     const button = document.createElement("button");
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isToday = isTodayDate(plan.day);
-    const isComplete = plan.tasks.every((_, index) => completed[taskKey(plan.day, index)]);
+    const selectedTasks = getSelectedTasksForDay(plan.day);
+    const isComplete = selectedTasks.length === MAX_DAILY_TASKS && selectedTasks.every((task) => completed[taskKey(plan.day, task.id)]);
 
     button.className = "day-button";
     button.type = "button";
@@ -328,7 +457,8 @@ function renderCalendar() {
     if (plan.day === selectedDay) button.classList.add("is-selected");
     if (isComplete) button.classList.add("is-complete");
 
-    button.innerHTML = `<strong>${plan.day}</strong><span>${plan.tasks[0].kind} · ${plan.tasks[1].kind}</span>`;
+    const kindLabel = selectedTasks.length > 0 ? selectedTasks.map((task) => task.kind).join(" · ") : "可选 · 自定";
+    button.innerHTML = `<strong>${plan.day}</strong><span>${escapeHtml(kindLabel)}</span>`;
     button.addEventListener("click", () => selectDay(plan.day));
     calendarGrid.append(button);
   });
@@ -348,27 +478,33 @@ function selectDay(day) {
 function renderDetail() {
   const plan = plans.find((item) => item.day === selectedDay);
   const date = new Date(YEAR, MONTH_INDEX, selectedDay);
+  const selectedTasks = getSelectedTasksForDay(selectedDay);
 
   selectedDate.textContent = `7月${selectedDay}日`;
   weekdayLabel.textContent = weekdayNames[date.getDay()];
   dayTheme.textContent = plan.theme;
   taskList.innerHTML = "";
 
-  plan.tasks.forEach((task, index) => {
+  const label = document.createElement("p");
+  label.className = "task-section-label";
+  label.innerHTML = `今日已选 <span>${selectedTasks.length} / ${MAX_DAILY_TASKS}</span>`;
+  taskList.append(label);
+
+  selectedTasks.forEach((task) => {
     const row = document.createElement("article");
     row.className = "task-row";
     row.dataset.kind = task.kind;
 
-    const key = taskKey(selectedDay, index);
+    const key = taskKey(selectedDay, task.id);
     const isDone = Boolean(completed[key]);
 
     row.innerHTML = `
-      <div class="task-badge" aria-hidden="true">${task.icon}</div>
+      <div class="task-badge" aria-hidden="true">${escapeHtml(task.icon)}</div>
       <div class="task-copy">
-        <h4>${task.kind} · ${task.title}</h4>
-        <p>${task.detail}</p>
+        <h4>${escapeHtml(task.kind)} · ${escapeHtml(task.title)}</h4>
+        <p>${escapeHtml(task.detail)}</p>
       </div>
-      <button class="task-check" type="button" aria-pressed="${isDone}" aria-label="${task.title}完成状态">${isDone ? "✓" : ""}</button>
+      <button class="task-check" type="button" aria-pressed="${isDone}" aria-label="${escapeHtml(task.title)}完成状态">${isDone ? "✓" : ""}</button>
     `;
 
     row.querySelector(".task-check").addEventListener("click", (event) => {
@@ -385,18 +521,166 @@ function renderDetail() {
 
     taskList.append(row);
   });
+
+  taskList.append(renderChoicePanel(plan, selectedTasks));
 }
 
-function taskKey(day, index) {
-  return `${day}-${index}`;
+function renderChoicePanel(plan, selectedTasks, message = "") {
+  const panel = document.createElement("section");
+  panel.className = "choice-panel";
+  panel.setAttribute("aria-label", "选择今天想做的事");
+
+  const title = document.createElement("p");
+  title.className = "task-section-label";
+  title.innerHTML = `换成别的任务 <span>最多选 ${MAX_DAILY_TASKS} 件</span>`;
+  panel.append(title);
+
+  const grid = document.createElement("div");
+  grid.className = "choice-grid";
+  const selectedIds = new Set(selectedTasks.map((task) => task.id));
+
+  plan.choices.forEach((task) => {
+    const selected = selectedIds.has(task.id);
+    const button = document.createElement("button");
+    button.className = "choice-button";
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(selected));
+    button.disabled = !selected && selectedTasks.length >= MAX_DAILY_TASKS;
+    button.innerHTML = `
+      <span class="choice-kind">${escapeHtml(task.kind)}</span>
+      ${escapeHtml(task.title)}
+    `;
+    button.addEventListener("click", () => toggleTaskChoice(task));
+    grid.append(button);
+  });
+
+  panel.append(grid);
+
+  const form = document.createElement("form");
+  form.className = "custom-task-form";
+  form.innerHTML = `
+    <input class="custom-task-input" type="text" maxlength="38" placeholder="写下今天想做的事" aria-label="自定义今天想做的事" />
+    <button class="custom-task-button" type="submit">加入</button>
+  `;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = form.querySelector(".custom-task-input");
+    addCustomTask(input.value);
+  });
+  panel.append(form);
+
+  const note = document.createElement("p");
+  note.className = "choice-note";
+  note.textContent = message || (selectedTasks.length >= MAX_DAILY_TASKS ? "已选满两件。想换任务时，先点已选任务取消。" : "可以从按钮里选，也可以输入自己的今日安排。");
+  panel.append(note);
+
+  return panel;
+}
+
+function toggleTaskChoice(task) {
+  const selectedTasks = getSelectedTasksForDay(selectedDay);
+  const exists = selectedTasks.some((item) => item.id === task.id);
+  let nextTasks;
+
+  if (exists) {
+    nextTasks = selectedTasks.filter((item) => item.id !== task.id);
+  } else {
+    if (selectedTasks.length >= MAX_DAILY_TASKS) {
+      renderDetailWithMessage("已选满两件。请先取消一个已选任务，再加入新的任务。");
+      return;
+    }
+    nextTasks = [...selectedTasks, task];
+  }
+
+  setSelectedTasksForDay(selectedDay, nextTasks);
+  renderCalendar();
+  renderDetail();
+  updateProgress();
+}
+
+function addCustomTask(value) {
+  const text = value.trim().replace(/\s+/g, " ");
+  if (!text) {
+    renderDetailWithMessage("先写下今天想做的事，再点击加入。");
+    return;
+  }
+
+  const selectedTasks = getSelectedTasksForDay(selectedDay);
+  if (selectedTasks.length >= MAX_DAILY_TASKS) {
+    renderDetailWithMessage("已选满两件。请先取消一个已选任务，再加入自定义任务。");
+    return;
+  }
+
+  const customTask = {
+    id: `custom-${Date.now()}`,
+    kind: "自定",
+    icon: "定",
+    title: "我的安排",
+    detail: text
+  };
+
+  setSelectedTasksForDay(selectedDay, [...selectedTasks, customTask]);
+  renderCalendar();
+  renderDetail();
+  updateProgress();
+}
+
+function renderDetailWithMessage(message) {
+  renderDetail();
+  const note = taskList.querySelector(".choice-note");
+  if (note) {
+    note.textContent = message;
+  }
+}
+
+function getSelectedTasksForDay(day) {
+  const stored = selections[String(day)];
+  if (!Array.isArray(stored) || stored.length === 0) {
+    return getPlan(day).choices.slice(0, MAX_DAILY_TASKS);
+  }
+
+  const choices = getPlan(day).choices;
+  return stored
+    .slice(0, MAX_DAILY_TASKS)
+    .map((task) => choices.find((choice) => choice.id === task.id) || task)
+    .filter(Boolean);
+}
+
+function setSelectedTasksForDay(day, tasks) {
+  selections[String(day)] = tasks.slice(0, MAX_DAILY_TASKS);
+  saveSelections();
+}
+
+function getPlan(day) {
+  return plans.find((item) => item.day === day);
+}
+
+function taskKey(day, id) {
+  return `${day}-${id}`;
 }
 
 function updateProgress() {
-  const done = Object.keys(completed).filter((key) => completed[key]).length;
+  let done = 0;
+  plans.forEach((plan) => {
+    getSelectedTasksForDay(plan.day).forEach((task) => {
+      if (completed[taskKey(plan.day, task.id)]) {
+        done += 1;
+      }
+    });
+  });
   const total = TOTAL_DAYS * 2;
   const percent = Math.round((done / total) * 100);
   progressText.textContent = `${done} / ${total}`;
   progressBar.style.width = `${percent}%`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function shuffleBonus() {
