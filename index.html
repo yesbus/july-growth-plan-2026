@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>7月提升计划</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero__bg" aria-hidden="true">
+          <img class="hero-scene" src="assets/line-dog-garden.png" alt="" />
+        </div>
+
+        <div class="hero__content">
+          <p class="eyebrow">July Reset</p>
+          <h1 id="page-title"><span class="title-line">7月提升</span><span class="title-line">计划</span></h1>
+          <p class="hero__lead">每天两件小事：读一点、动一动、做一点益智手作，把专注力和体能慢慢拉起来。</p>
+          <div class="hero__actions">
+            <button class="primary-button" id="openPlan" type="button">
+              <span class="button-icon" aria-hidden="true">▶</span>
+              打开7月计划
+            </button>
+          </div>
+          <div class="hero__chips" aria-label="计划摘要">
+            <span>31天</span>
+            <span>每天2项</span>
+            <span>阅读</span>
+            <span>运动</span>
+            <span>益智手作</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="planner" id="planner" aria-labelledby="planner-title" hidden>
+        <div class="planner__inner">
+          <div class="planner__header">
+            <div>
+              <p class="eyebrow">2026</p>
+              <h2 id="planner-title">七月日历</h2>
+            </div>
+            <div class="progress" aria-live="polite">
+              <span id="progressText">0 / 62</span>
+              <div class="progress__track" aria-hidden="true">
+                <span id="progressBar"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="planner__layout">
+            <section class="calendar-area" aria-label="七月日期">
+              <div class="weekday-grid" aria-hidden="true">
+                <span>一</span>
+                <span>二</span>
+                <span>三</span>
+                <span>四</span>
+                <span>五</span>
+                <span>六</span>
+                <span>日</span>
+              </div>
+              <div class="calendar-grid" id="calendarGrid"></div>
+            </section>
+
+            <section class="day-detail" aria-label="当天安排">
+              <div class="day-detail__top">
+                <div>
+                  <p class="eyebrow" id="weekdayLabel">Wednesday</p>
+                  <h3 id="selectedDate">7月1日</h3>
+                </div>
+                <div class="mini-dog" aria-hidden="true">
+                  <img src="assets/line-dog-beach.png" alt="" />
+                </div>
+              </div>
+
+              <p class="day-theme" id="dayTheme">从轻量开始，把节奏调顺。</p>
+
+              <div class="task-list" id="taskList"></div>
+
+              <div class="bonus">
+                <div>
+                  <p class="bonus__label">补能小条</p>
+                  <p id="bonusText">桌面只留今天要用的3样东西。</p>
+                </div>
+                <button class="icon-button" id="shuffleBonus" type="button" aria-label="换一条补能建议" title="换一条补能建议">↻</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
