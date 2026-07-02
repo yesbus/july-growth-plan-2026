@@ -3,6 +3,8 @@ const MONTH_INDEX = 6;
 const TOTAL_DAYS = 31;
 const STORAGE_KEY = "july-growth-plan-2026";
 const SELECTION_STORAGE_KEY = "july-growth-plan-2026-selections";
+const REFLECTION_STORAGE_KEY = "july-growth-plan-2026-reflections";
+const PHOTO_STORAGE_KEY = "july-growth-plan-2026-photos";
 const MAX_DAILY_TASKS = 2;
 
 const plans = [
@@ -375,6 +377,8 @@ const shuffleBonusButton = document.querySelector("#shuffleBonus");
 let selectedDay = getDefaultDay();
 let completed = loadCompleted();
 let selections = loadSelections();
+let reflections = loadReflections();
+let checkinPhotos = loadCheckinPhotos();
 
 function buildDailyChoices(plan) {
   const day = plan.day;
@@ -421,12 +425,36 @@ function loadSelections() {
   }
 }
 
+function loadReflections() {
+  try {
+    return JSON.parse(localStorage.getItem(REFLECTION_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function loadCheckinPhotos() {
+  try {
+    return JSON.parse(localStorage.getItem(PHOTO_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
 function saveCompleted() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
 }
 
 function saveSelections() {
   localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(selections));
+}
+
+function saveReflections() {
+  localStorage.setItem(REFLECTION_STORAGE_KEY, JSON.stringify(reflections));
+}
+
+function saveCheckinPhotos() {
+  localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(checkinPhotos));
 }
 
 function renderCalendar() {
@@ -497,6 +525,13 @@ function renderDetail() {
 
     const key = taskKey(selectedDay, task.id);
     const isDone = Boolean(completed[key]);
+    const isCustom = task.kind === "自定";
+    const customActions = isCustom
+      ? `
+        <button class="small-action edit-custom" type="button" aria-label="修改${escapeHtml(task.title)}">改</button>
+        <button class="small-action delete-custom" type="button" aria-label="删除${escapeHtml(task.title)}">删</button>
+      `
+      : "";
 
     row.innerHTML = `
       <div class="task-badge" aria-hidden="true">${escapeHtml(task.icon)}</div>
@@ -504,7 +539,14 @@ function renderDetail() {
         <h4>${escapeHtml(task.kind)} · ${escapeHtml(task.title)}</h4>
         <p>${escapeHtml(task.detail)}</p>
       </div>
-      <button class="task-check" type="button" aria-pressed="${isDone}" aria-label="${escapeHtml(task.title)}完成状态">${isDone ? "✓" : ""}</button>
+      <div class="task-actions">
+        <button class="task-check" type="button" aria-pressed="${isDone}" aria-label="${escapeHtml(task.title)}完成状态">${isDone ? "✓" : ""}</button>
+        ${customActions}
+      </div>
+      <label class="task-reflection">
+        <span>完成感悟</span>
+        <textarea class="reflection-input" maxlength="240" placeholder="写下做完后的感受" aria-label="${escapeHtml(task.title)}完成感悟"></textarea>
+      </label>
     `;
 
     row.querySelector(".task-check").addEventListener("click", (event) => {
@@ -519,10 +561,27 @@ function renderDetail() {
       renderCalendar();
     });
 
+    const reflectionInput = row.querySelector(".reflection-input");
+    reflectionInput.value = reflections[key] || "";
+    reflectionInput.addEventListener("input", () => {
+      if (reflectionInput.value.trim()) {
+        reflections[key] = reflectionInput.value;
+      } else {
+        delete reflections[key];
+      }
+      saveReflections();
+    });
+
+    if (isCustom) {
+      row.querySelector(".edit-custom").addEventListener("click", () => editCustomTask(task.id));
+      row.querySelector(".delete-custom").addEventListener("click", () => deleteCustomTask(task.id));
+    }
+
     taskList.append(row);
   });
 
   taskList.append(renderChoicePanel(plan, selectedTasks));
+  taskList.append(renderPhotoCheckin());
 }
 
 function renderChoicePanel(plan, selectedTasks, message = "") {
@@ -623,6 +682,131 @@ function addCustomTask(value) {
   renderCalendar();
   renderDetail();
   updateProgress();
+}
+
+function editCustomTask(taskId) {
+  const selectedTasks = getSelectedTasksForDay(selectedDay);
+  const currentTask = selectedTasks.find((task) => task.id === taskId);
+  if (!currentTask) return;
+
+  const nextValue = window.prompt("修改今天想做的事", currentTask.detail);
+  if (nextValue === null) return;
+
+  const text = nextValue.trim().replace(/\s+/g, " ");
+  if (!text) {
+    renderDetailWithMessage("内容不能为空。想删掉这条任务，可以点任务右侧的删。");
+    return;
+  }
+
+  const nextTasks = selectedTasks.map((task) => (
+    task.id === taskId
+      ? { ...task, detail: text }
+      : task
+  ));
+  setSelectedTasksForDay(selectedDay, nextTasks);
+  renderCalendar();
+  renderDetail();
+}
+
+function deleteCustomTask(taskId) {
+  const selectedTasks = getSelectedTasksForDay(selectedDay);
+  const nextTasks = selectedTasks.filter((task) => task.id !== taskId);
+  const key = taskKey(selectedDay, taskId);
+
+  delete completed[key];
+  delete reflections[key];
+  saveCompleted();
+  saveReflections();
+  setSelectedTasksForDay(selectedDay, nextTasks);
+  renderCalendar();
+  renderDetail();
+  updateProgress();
+}
+
+function renderPhotoCheckin() {
+  const section = document.createElement("section");
+  section.className = "photo-checkin";
+  section.setAttribute("aria-label", "图片打卡");
+
+  const photos = getPhotosForDay(selectedDay);
+  section.innerHTML = `
+    <div class="photo-header">
+      <p class="task-section-label">图片打卡 <span>${photos.length} 张</span></p>
+      <label class="photo-upload-button">
+        上传图片
+        <input class="photo-input" type="file" accept="image/*" multiple />
+      </label>
+    </div>
+    <div class="photo-gallery"></div>
+  `;
+
+  const input = section.querySelector(".photo-input");
+  input.addEventListener("change", async () => {
+    await addCheckinPhotos(input.files);
+    input.value = "";
+  });
+
+  const gallery = section.querySelector(".photo-gallery");
+  if (photos.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "photo-empty";
+    empty.textContent = "今天还没有图片。";
+    gallery.append(empty);
+    return section;
+  }
+
+  photos.forEach((photo) => {
+    const card = document.createElement("figure");
+    card.className = "photo-card";
+    card.innerHTML = `
+      <img src="${photo.dataUrl}" alt="${escapeHtml(photo.name || "打卡图片")}" />
+      <button class="photo-delete" type="button" aria-label="删除这张图片">删</button>
+    `;
+    card.querySelector(".photo-delete").addEventListener("click", () => deleteCheckinPhoto(photo.id));
+    gallery.append(card);
+  });
+
+  return section;
+}
+
+function getPhotosForDay(day) {
+  const photos = checkinPhotos[String(day)];
+  return Array.isArray(photos) ? photos : [];
+}
+
+async function addCheckinPhotos(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
+  if (files.length === 0) return;
+
+  const photos = await Promise.all(files.map(readImageFile));
+  checkinPhotos[String(selectedDay)] = [...getPhotosForDay(selectedDay), ...photos];
+  saveCheckinPhotos();
+  renderDetail();
+}
+
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        id: `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        dataUrl: reader.result,
+        name: file.name,
+        createdAt: new Date().toISOString()
+      });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function deleteCheckinPhoto(photoId) {
+  checkinPhotos[String(selectedDay)] = getPhotosForDay(selectedDay).filter((photo) => photo.id !== photoId);
+  if (checkinPhotos[String(selectedDay)].length === 0) {
+    delete checkinPhotos[String(selectedDay)];
+  }
+  saveCheckinPhotos();
+  renderDetail();
 }
 
 function renderDetailWithMessage(message) {
