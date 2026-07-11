@@ -375,6 +375,9 @@ const dayTheme = document.querySelector("#dayTheme");
 const taskList = document.querySelector("#taskList");
 const progressText = document.querySelector("#progressText");
 const progressBar = document.querySelector("#progressBar");
+const progressPanel = document.querySelector("#progressPanel");
+const loginGate = document.querySelector("#loginGate");
+const plannerContent = document.querySelector("#plannerContent");
 const bonusText = document.querySelector("#bonusText");
 const openPlanButton = document.querySelector("#openPlan");
 const shuffleBonusButton = document.querySelector("#shuffleBonus");
@@ -496,6 +499,23 @@ function updateAuthUi() {
   cloudUser.textContent = signedIn ? currentUser.email : "未登录";
   authForm.hidden = signedIn;
   logoutButton.hidden = !signedIn;
+  syncAccessState();
+}
+
+function syncAccessState() {
+  const signedIn = Boolean(currentUser);
+  if (loginGate) loginGate.hidden = signedIn;
+  if (plannerContent) plannerContent.hidden = !signedIn;
+  if (progressPanel) progressPanel.hidden = !signedIn;
+  openPlanButton.textContent = planner.hidden
+    ? "打开7月计划"
+    : (signedIn ? "计划已打开" : "请先登录");
+
+  if (!planner.hidden && signedIn) {
+    renderCalendar();
+    renderDetail();
+    updateProgress();
+  }
 }
 
 function getSharedState() {
@@ -520,11 +540,7 @@ function applySharedState(data) {
   localStorage.setItem(REFLECTION_STORAGE_KEY, JSON.stringify(reflections));
   localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(checkinPhotos));
   applyingCloudState = false;
-  if (!planner.hidden) {
-    renderCalendar();
-    renderDetail();
-    updateProgress();
-  }
+  syncAccessState();
 }
 
 function queueCloudSave() {
@@ -1127,10 +1143,7 @@ function shuffleBonus() {
 
 function openPlanner() {
   planner.hidden = false;
-  openPlanButton.textContent = "计划已打开";
-  renderCalendar();
-  renderDetail();
-  updateProgress();
+  syncAccessState();
   window.requestAnimationFrame(() => {
     planner.scrollIntoView({ behavior: "smooth", block: "start" });
   });
