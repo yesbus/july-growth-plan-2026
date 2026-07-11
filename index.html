@@ -41,6 +41,19 @@
               <p class="eyebrow">2026</p>
               <h2 id="planner-title">七月日历</h2>
             </div>
+            <section class="cloud-panel" aria-label="云端同步登录">
+              <div class="cloud-panel__top">
+                <strong id="cloudStatus">本机保存</strong>
+                <span id="cloudUser">未登录</span>
+              </div>
+              <form class="auth-form" id="authForm">
+                <input id="authEmail" type="email" autocomplete="username" placeholder="邮箱" aria-label="邮箱" />
+                <input id="authPassword" type="password" autocomplete="current-password" placeholder="密码" aria-label="密码" />
+                <button id="loginButton" type="submit">登录</button>
+                <button id="registerButton" type="button">注册</button>
+              </form>
+              <button class="logout-button" id="logoutButton" type="button" hidden>退出登录</button>
+            </section>
             <div class="progress" aria-live="polite">
               <span id="progressText">0 / 62</span>
               <div class="progress__track" aria-hidden="true">
@@ -91,6 +104,7 @@
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
   </body>
 </html>
