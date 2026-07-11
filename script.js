@@ -6,6 +6,11 @@ const SELECTION_STORAGE_KEY = "july-growth-plan-2026-selections";
 const REFLECTION_STORAGE_KEY = "july-growth-plan-2026-reflections";
 const PHOTO_STORAGE_KEY = "july-growth-plan-2026-photos";
 const MIN_DAILY_TASKS = 2;
+const SUPABASE_URL = "https://whkvfrtldzvbengdiwjx.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_L4eEAdnqTbEseVte149-OQ_Z7nW6DpF";
+const CLOUD_STATE_ID = "shared-july-growth-plan-2026";
+const CLOUD_TABLE = "july_growth_state";
+const PHOTO_BUCKET = "july-checkins";
 
 const plans = [
   {
@@ -373,12 +378,25 @@ const progressBar = document.querySelector("#progressBar");
 const bonusText = document.querySelector("#bonusText");
 const openPlanButton = document.querySelector("#openPlan");
 const shuffleBonusButton = document.querySelector("#shuffleBonus");
+const cloudPanel = document.querySelector(".cloud-panel");
+const cloudStatus = document.querySelector("#cloudStatus");
+const cloudUser = document.querySelector("#cloudUser");
+const authForm = document.querySelector("#authForm");
+const authEmail = document.querySelector("#authEmail");
+const authPassword = document.querySelector("#authPassword");
+const registerButton = document.querySelector("#registerButton");
+const logoutButton = document.querySelector("#logoutButton");
 
 let selectedDay = getDefaultDay();
 let completed = loadCompleted();
 let selections = loadSelections();
 let reflections = loadReflections();
 let checkinPhotos = loadCheckinPhotos();
+let supabaseClient = null;
+let currentUser = null;
+let cloudReady = false;
+let cloudSaveTimer = null;
+let applyingCloudState = false;
 
 function buildDailyChoices(plan) {
   const day = plan.day;
@@ -443,18 +461,198 @@ function loadCheckinPhotos() {
 
 function saveCompleted() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
+  queueCloudSave();
 }
 
 function saveSelections() {
   localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(selections));
+  queueCloudSave();
 }
 
 function saveReflections() {
   localStorage.setItem(REFLECTION_STORAGE_KEY, JSON.stringify(reflections));
+  queueCloudSave();
 }
 
 function saveCheckinPhotos() {
   localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(checkinPhotos));
+  queueCloudSave();
+}
+
+function isCloudConfigured() {
+  return Boolean(window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY);
+}
+
+function setCloudStatus(message, mode = "local") {
+  if (!cloudStatus || !cloudPanel) return;
+  cloudStatus.textContent = message;
+  cloudPanel.classList.toggle("is-synced", mode === "synced");
+  cloudPanel.classList.toggle("is-error", mode === "error");
+}
+
+function updateAuthUi() {
+  if (!cloudUser || !authForm || !logoutButton) return;
+  const signedIn = Boolean(currentUser);
+  cloudUser.textContent = signedIn ? currentUser.email : "未登录";
+  authForm.hidden = signedIn;
+  logoutButton.hidden = !signedIn;
+}
+
+function getSharedState() {
+  return {
+    completed,
+    selections,
+    reflections,
+    checkinPhotos,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function applySharedState(data) {
+  if (!data || typeof data !== "object") return;
+  applyingCloudState = true;
+  completed = data.completed && typeof data.completed === "object" ? data.completed : {};
+  selections = data.selections && typeof data.selections === "object" ? data.selections : {};
+  reflections = data.reflections && typeof data.reflections === "object" ? data.reflections : {};
+  checkinPhotos = data.checkinPhotos && typeof data.checkinPhotos === "object" ? data.checkinPhotos : {};
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
+  localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(selections));
+  localStorage.setItem(REFLECTION_STORAGE_KEY, JSON.stringify(reflections));
+  localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(checkinPhotos));
+  applyingCloudState = false;
+  if (!planner.hidden) {
+    renderCalendar();
+    renderDetail();
+    updateProgress();
+  }
+}
+
+function queueCloudSave() {
+  if (applyingCloudState || !cloudReady || !currentUser || !supabaseClient) return;
+  window.clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = window.setTimeout(saveCloudState, 700);
+}
+
+async function saveCloudState() {
+  if (!cloudReady || !currentUser || !supabaseClient) return;
+  setCloudStatus("正在同步", "local");
+  const { error } = await supabaseClient
+    .from(CLOUD_TABLE)
+    .upsert({
+      id: CLOUD_STATE_ID,
+      data: getSharedState(),
+      updated_by: currentUser.id,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "id" });
+
+  if (error) {
+    setCloudStatus(`同步失败：${error.message}`, "error");
+    return;
+  }
+  setCloudStatus("云端已同步", "synced");
+}
+
+async function loadCloudState() {
+  if (!cloudReady || !currentUser || !supabaseClient) return;
+  setCloudStatus("正在读取云端", "local");
+  const { data, error } = await supabaseClient
+    .from(CLOUD_TABLE)
+    .select("data")
+    .eq("id", CLOUD_STATE_ID)
+    .maybeSingle();
+
+  if (error) {
+    setCloudStatus(`读取失败：${error.message}`, "error");
+    return;
+  }
+
+  if (data?.data) {
+    applySharedState(data.data);
+    setCloudStatus("云端已载入", "synced");
+    return;
+  }
+
+  await saveCloudState();
+}
+
+async function initCloudSync() {
+  updateAuthUi();
+  if (!isCloudConfigured()) {
+    setCloudStatus("云端未配置", "error");
+    return;
+  }
+
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data } = await supabaseClient.auth.getSession();
+  currentUser = data.session?.user || null;
+  cloudReady = Boolean(currentUser);
+  updateAuthUi();
+  setCloudStatus(currentUser ? "云端已登录" : "本机保存", currentUser ? "synced" : "local");
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user || null;
+    cloudReady = Boolean(currentUser);
+    updateAuthUi();
+    if (currentUser) {
+      loadCloudState();
+    } else {
+      setCloudStatus("本机保存", "local");
+    }
+  });
+
+  if (currentUser) {
+    await loadCloudState();
+  }
+}
+
+function getAuthValues() {
+  return {
+    email: authEmail.value.trim(),
+    password: authPassword.value
+  };
+}
+
+async function signInWithPassword(event) {
+  event.preventDefault();
+  if (!supabaseClient) {
+    setCloudStatus("先填入 Supabase anon key", "error");
+    return;
+  }
+  const { email, password } = getAuthValues();
+  if (!email || !password) {
+    setCloudStatus("请输入邮箱和密码", "error");
+    return;
+  }
+  setCloudStatus("正在登录", "local");
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    setCloudStatus(`登录失败：${error.message}`, "error");
+  }
+}
+
+async function registerAccount() {
+  if (!supabaseClient) {
+    setCloudStatus("先填入 Supabase anon key", "error");
+    return;
+  }
+  const { email, password } = getAuthValues();
+  if (!email || password.length < 6) {
+    setCloudStatus("邮箱必填，密码至少 6 位", "error");
+    return;
+  }
+  setCloudStatus("正在注册", "local");
+  const { error } = await supabaseClient.auth.signUp({ email, password });
+  if (error) {
+    setCloudStatus(`注册失败：${error.message}`, "error");
+    return;
+  }
+  setCloudStatus("注册成功，请按提示确认邮箱后登录", "synced");
+}
+
+async function signOut() {
+  if (!supabaseClient) return;
+  await saveCloudState();
+  await supabaseClient.auth.signOut();
 }
 
 function renderCalendar() {
@@ -755,8 +953,9 @@ function renderPhotoCheckin() {
   photos.forEach((photo) => {
     const card = document.createElement("figure");
     card.className = "photo-card";
+    const photoSource = photo.url || photo.dataUrl;
     card.innerHTML = `
-      <img src="${photo.dataUrl}" alt="${escapeHtml(photo.name || "打卡图片")}" />
+      <img src="${photoSource}" alt="${escapeHtml(photo.name || "打卡图片")}" />
       <button class="photo-delete" type="button" aria-label="删除这张图片">删</button>
     `;
     card.querySelector(".photo-delete").addEventListener("click", () => deleteCheckinPhoto(photo.id));
@@ -775,10 +974,38 @@ async function addCheckinPhotos(fileList) {
   const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
   if (files.length === 0) return;
 
-  const photos = await Promise.all(files.map(readImageFile));
+  const photos = await Promise.all(files.map((file) => (
+    cloudReady && currentUser && supabaseClient
+      ? uploadCheckinPhoto(file)
+      : readImageFile(file)
+  )));
   checkinPhotos[String(selectedDay)] = [...getPhotosForDay(selectedDay), ...photos];
   saveCheckinPhotos();
   renderDetail();
+}
+
+async function uploadCheckinPhoto(file) {
+  const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "jpg";
+  const path = `${CLOUD_STATE_ID}/day-${selectedDay}/${Date.now()}-${Math.random().toString(16).slice(2)}.${extension}`;
+  const { error } = await supabaseClient.storage.from(PHOTO_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false
+  });
+
+  if (error) {
+    setCloudStatus(`图片上传失败：${error.message}`, "error");
+    return readImageFile(file);
+  }
+
+  const { data } = supabaseClient.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+  return {
+    id: `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    url: data.publicUrl,
+    path,
+    name: file.name,
+    createdAt: new Date().toISOString(),
+    uploadedBy: currentUser.email
+  };
 }
 
 function readImageFile(file) {
@@ -797,8 +1024,16 @@ function readImageFile(file) {
   });
 }
 
-function deleteCheckinPhoto(photoId) {
-  checkinPhotos[String(selectedDay)] = getPhotosForDay(selectedDay).filter((photo) => photo.id !== photoId);
+async function deleteCheckinPhoto(photoId) {
+  const photo = getPhotosForDay(selectedDay).find((item) => item.id === photoId);
+  if (photo?.path && cloudReady && currentUser && supabaseClient) {
+    const { error } = await supabaseClient.storage.from(PHOTO_BUCKET).remove([photo.path]);
+    if (error) {
+      setCloudStatus(`图片删除失败：${error.message}`, "error");
+    }
+  }
+
+  checkinPhotos[String(selectedDay)] = getPhotosForDay(selectedDay).filter((item) => item.id !== photoId);
   if (checkinPhotos[String(selectedDay)].length === 0) {
     delete checkinPhotos[String(selectedDay)];
   }
@@ -903,6 +1138,10 @@ function openPlanner() {
 
 openPlanButton.addEventListener("click", openPlanner);
 shuffleBonusButton.addEventListener("click", shuffleBonus);
+authForm.addEventListener("submit", signInWithPassword);
+registerButton.addEventListener("click", registerAccount);
+logoutButton.addEventListener("click", signOut);
+initCloudSync();
 
 if (window.location.hash === "#planner") {
   openPlanner();
