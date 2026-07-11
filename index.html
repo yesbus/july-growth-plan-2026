@@ -54,7 +54,7 @@
               </form>
               <button class="logout-button" id="logoutButton" type="button" hidden>退出登录</button>
             </section>
-            <div class="progress" aria-live="polite">
+            <div class="progress" id="progressPanel" aria-live="polite" hidden>
               <span id="progressText">0 / 62</span>
               <div class="progress__track" aria-hidden="true">
                 <span id="progressBar"></span>
@@ -62,7 +62,13 @@
             </div>
           </div>
 
-          <div class="planner__layout">
+          <section class="login-gate" id="loginGate" aria-label="登录后查看计划">
+            <p class="eyebrow">Private Plan</p>
+            <h3>登录后查看计划内容</h3>
+            <p>请输入邮箱和密码登录。登录成功后，七月日历、每日任务、感悟和图片打卡才会显示，并同步到云端。</p>
+          </section>
+
+          <div class="planner__layout" id="plannerContent" hidden>
             <section class="calendar-area" aria-label="七月日期">
               <div class="weekday-grid" aria-hidden="true">
                 <span>一</span>
