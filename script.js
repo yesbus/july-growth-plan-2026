@@ -5,7 +5,7 @@ const STORAGE_KEY = "july-growth-plan-2026";
 const SELECTION_STORAGE_KEY = "july-growth-plan-2026-selections";
 const REFLECTION_STORAGE_KEY = "july-growth-plan-2026-reflections";
 const PHOTO_STORAGE_KEY = "july-growth-plan-2026-photos";
-const MAX_DAILY_TASKS = 2;
+const MIN_DAILY_TASKS = 2;
 
 const plans = [
   {
@@ -474,7 +474,7 @@ function renderCalendar() {
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isToday = isTodayDate(plan.day);
     const selectedTasks = getSelectedTasksForDay(plan.day);
-    const isComplete = selectedTasks.length === MAX_DAILY_TASKS && selectedTasks.every((task) => completed[taskKey(plan.day, task.id)]);
+    const isComplete = selectedTasks.length >= MIN_DAILY_TASKS && selectedTasks.every((task) => completed[taskKey(plan.day, task.id)]);
 
     button.className = "day-button";
     button.type = "button";
@@ -485,7 +485,10 @@ function renderCalendar() {
     if (plan.day === selectedDay) button.classList.add("is-selected");
     if (isComplete) button.classList.add("is-complete");
 
-    const kindLabel = selectedTasks.length > 0 ? selectedTasks.map((task) => task.kind).join(" · ") : "可选 · 自定";
+    const kindSummary = selectedTasks.length > 3
+      ? `${selectedTasks.slice(0, 3).map((task) => task.kind).join(" · ")} +${selectedTasks.length - 3}`
+      : selectedTasks.map((task) => task.kind).join(" · ");
+    const kindLabel = selectedTasks.length > 0 ? kindSummary : "可选 · 自定";
     button.innerHTML = `<strong>${plan.day}</strong><span>${escapeHtml(kindLabel)}</span>`;
     button.addEventListener("click", () => selectDay(plan.day));
     calendarGrid.append(button);
@@ -515,7 +518,7 @@ function renderDetail() {
 
   const label = document.createElement("p");
   label.className = "task-section-label";
-  label.innerHTML = `今日已选 <span>${selectedTasks.length} / ${MAX_DAILY_TASKS}</span>`;
+  label.innerHTML = `今日已选 <span>${selectedTasks.length} 项 · 至少 ${MIN_DAILY_TASKS} 项</span>`;
   taskList.append(label);
 
   selectedTasks.forEach((task) => {
@@ -591,7 +594,7 @@ function renderChoicePanel(plan, selectedTasks, message = "") {
 
   const title = document.createElement("p");
   title.className = "task-section-label";
-  title.innerHTML = `换成别的任务 <span>最多选 ${MAX_DAILY_TASKS} 件</span>`;
+  title.innerHTML = `添加或更换任务 <span>至少 ${MIN_DAILY_TASKS} 件，可继续加</span>`;
   panel.append(title);
 
   const grid = document.createElement("div");
@@ -604,7 +607,6 @@ function renderChoicePanel(plan, selectedTasks, message = "") {
     button.className = "choice-button";
     button.type = "button";
     button.setAttribute("aria-pressed", String(selected));
-    button.disabled = !selected && selectedTasks.length >= MAX_DAILY_TASKS;
     button.innerHTML = `
       <span class="choice-kind">${escapeHtml(task.kind)}</span>
       ${escapeHtml(task.title)}
@@ -630,7 +632,7 @@ function renderChoicePanel(plan, selectedTasks, message = "") {
 
   const note = document.createElement("p");
   note.className = "choice-note";
-  note.textContent = message || (selectedTasks.length >= MAX_DAILY_TASKS ? "已选满两件。想换任务时，先点已选任务取消。" : "可以从按钮里选，也可以输入自己的今日安排。");
+  note.textContent = message || "每天至少保留两件，可以继续从按钮里加，也可以输入自己的今日安排。";
   panel.append(note);
 
   return panel;
@@ -642,12 +644,12 @@ function toggleTaskChoice(task) {
   let nextTasks;
 
   if (exists) {
-    nextTasks = selectedTasks.filter((item) => item.id !== task.id);
-  } else {
-    if (selectedTasks.length >= MAX_DAILY_TASKS) {
-      renderDetailWithMessage("已选满两件。请先取消一个已选任务，再加入新的任务。");
+    if (selectedTasks.length <= MIN_DAILY_TASKS) {
+      renderDetailWithMessage(`每天至少保留 ${MIN_DAILY_TASKS} 件。想换任务时，先添加新任务，再取消旧任务。`);
       return;
     }
+    nextTasks = selectedTasks.filter((item) => item.id !== task.id);
+  } else {
     nextTasks = [...selectedTasks, task];
   }
 
@@ -665,11 +667,6 @@ function addCustomTask(value) {
   }
 
   const selectedTasks = getSelectedTasksForDay(selectedDay);
-  if (selectedTasks.length >= MAX_DAILY_TASKS) {
-    renderDetailWithMessage("已选满两件。请先取消一个已选任务，再加入自定义任务。");
-    return;
-  }
-
   const customTask = {
     id: `custom-${Date.now()}`,
     kind: "自定",
@@ -820,19 +817,36 @@ function renderDetailWithMessage(message) {
 function getSelectedTasksForDay(day) {
   const stored = selections[String(day)];
   if (!Array.isArray(stored) || stored.length === 0) {
-    return getPlan(day).choices.slice(0, MAX_DAILY_TASKS);
+    return getPlan(day).choices.slice(0, MIN_DAILY_TASKS);
   }
 
-  const choices = getPlan(day).choices;
-  return stored
-    .slice(0, MAX_DAILY_TASKS)
-    .map((task) => choices.find((choice) => choice.id === task.id) || task)
-    .filter(Boolean);
+  return normalizeTasksForDay(day, stored);
 }
 
 function setSelectedTasksForDay(day, tasks) {
-  selections[String(day)] = tasks.slice(0, MAX_DAILY_TASKS);
+  selections[String(day)] = normalizeTasksForDay(day, tasks);
   saveSelections();
+}
+
+function normalizeTasksForDay(day, tasks) {
+  const choices = getPlan(day).choices;
+  const selected = [];
+  const seen = new Set();
+
+  tasks.forEach((task) => {
+    if (!task || !task.id || seen.has(task.id)) return;
+    const currentChoice = choices.find((choice) => choice.id === task.id);
+    selected.push(currentChoice || task);
+    seen.add(task.id);
+  });
+
+  choices.forEach((choice) => {
+    if (selected.length >= MIN_DAILY_TASKS || seen.has(choice.id)) return;
+    selected.push(choice);
+    seen.add(choice.id);
+  });
+
+  return selected;
 }
 
 function getPlan(day) {
@@ -845,15 +859,17 @@ function taskKey(day, id) {
 
 function updateProgress() {
   let done = 0;
+  let total = 0;
   plans.forEach((plan) => {
-    getSelectedTasksForDay(plan.day).forEach((task) => {
+    const selectedTasks = getSelectedTasksForDay(plan.day);
+    total += selectedTasks.length;
+    selectedTasks.forEach((task) => {
       if (completed[taskKey(plan.day, task.id)]) {
         done += 1;
       }
     });
   });
-  const total = TOTAL_DAYS * 2;
-  const percent = Math.round((done / total) * 100);
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
   progressText.textContent = `${done} / ${total}`;
   progressBar.style.width = `${percent}%`;
 }
